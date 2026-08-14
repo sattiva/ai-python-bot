@@ -171,7 +171,7 @@ All runtime settings are managed inside `config.json` or dynamically modified th
 | `/set owner` | `<action: add\|remove> <user>` | Add or remove bot administrator IDs. |
 | `/set channel` | `<channel> <allow\|remove>` | Restrict bot commands to specific whitelisted channels. |
 | `/set cooldown` | `<action: set\|bypass_user\|bypass_role> [seconds] [user] [role]` | Set global command rate limit interval or configure bypass rules. |
-| `/set tts` | `[provider] [voice] [filter_target] [filter_enabled]` | Configure active TTS engine, voice identifier, and speech text filters. |
+| `/set tts` | `[provider] [voice] [speed] [filter_target] [filter_enabled]` | Configure active TTS engine, voice identifier, speech playback speed multiplier, and speech text filters. |
 | `/set embed` | `[color] [mode]` | Update default embed accent color (hex) and presentation format (standard / plain). |
 | `/set usage_limit` | `<target_type: user\|role> <target_id> <daily_quota>` | Enforce maximum daily request limits for users or roles. |
 | `/set prompt` | `<action: view\|set\|clear> [text] [scope: personal\|global]` | Configure system instructions globally or per-user. |

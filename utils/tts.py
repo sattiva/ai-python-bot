@@ -47,7 +47,8 @@ async def synthesize_speech(
     api_key: str,
     text: str,
     voice_id: str = "aura-asteria-en",
-    filters: dict | None = None
+    filters: dict | None = None,
+    speed: float = 1.0
 ) -> tuple[str | None, bytes | None]:
     if not api_key:
         return f"{provider.capitalize()} API key is missing.", None
@@ -74,7 +75,8 @@ async def synthesize_speech(
         payload = {
             "model": "tts-1",
             "voice": voice_id if voice_id else "alloy",
-            "input": speech_text
+            "input": speech_text,
+            "speed": max(0.25, min(4.0, speed))
         }
     elif provider_lower == "elevenlabs":
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -100,6 +102,10 @@ async def synthesize_speech(
     except Exception as exc:
         return str(exc), None
 
-def create_audio_source(audio_bytes: bytes) -> discord.AudioSource:
+def create_audio_source(audio_bytes: bytes, speed: float = 1.0) -> discord.AudioSource:
     ffmpeg_exe = get_ffmpeg_binary()
-    return discord.FFmpegPCMAudio(io.BytesIO(audio_bytes), pipe=True, executable=ffmpeg_exe)
+    options = None
+    if speed and abs(speed - 1.0) > 0.01:
+        clamped_speed = max(0.5, min(2.0, speed))
+        options = f"-filter:a atempo={clamped_speed:.2f}"
+    return discord.FFmpegPCMAudio(io.BytesIO(audio_bytes), pipe=True, executable=ffmpeg_exe, options=options)

@@ -306,6 +306,7 @@ class AdminCog(commands.Cog):
     @app_commands.describe(
         provider="TTS provider",
         voice="Voice identifier",
+        speed="Speech playback speed (e.g. 0.8, 1.0, 1.25)",
         filter_target="Speech filter target to toggle",
         filter_enabled="Filter toggle state"
     )
@@ -326,6 +327,7 @@ class AdminCog(commands.Cog):
         interaction: discord.Interaction,
         provider: str | None = None,
         voice: str | None = None,
+        speed: float | None = None,
         filter_target: str | None = None,
         filter_enabled: bool | None = None
     ):
@@ -345,7 +347,12 @@ class AdminCog(commands.Cog):
             tts_settings["voice_id"] = voice.strip()
             changes.append(f"Voice: `{voice.strip()}`")
 
-        if provider or voice:
+        if speed is not None:
+            clamped_speed = round(max(0.5, min(2.0, float(speed))), 2)
+            tts_settings["speed"] = clamped_speed
+            changes.append(f"Speed: `{clamped_speed}x`")
+
+        if provider or voice or (speed is not None):
             self.config.set("tts_settings", tts_settings)
 
         if filter_target is not None:
@@ -369,9 +376,10 @@ class AdminCog(commands.Cog):
         if not changes:
             curr_p = tts_settings.get("provider", "deepgram")
             curr_v = tts_settings.get("voice_id", "aura-asteria-en")
+            curr_s = tts_settings.get("speed", 1.0)
             embed = create_embed(
                 title="TTS Configuration",
-                description=f"Provider: `{curr_p}`\nVoice: `{curr_v}`",
+                description=f"Provider: `{curr_p}`\nVoice: `{curr_v}`\nSpeed: `{curr_s}x`",
                 color=self.config.get_embed_color()
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)

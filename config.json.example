@@ -30,7 +30,8 @@
   },
   "tts_settings": {
     "provider": "deepgram",
-    "voice_id": "aura-asteria-en"
+    "voice_id": "aura-asteria-en",
+    "speed": 1.0
   },
   "embed_settings": {
     "color": "0x2B2D31",
