@@ -33,8 +33,8 @@ class VoiceCog(commands.Cog):
         voice_client = interaction.guild.voice_client
 
         try:
-            if voice_client:
-                if voice_client.channel.id == target_channel.id:
+            if voice_client and voice_client.is_connected():
+                if voice_client.channel and voice_client.channel.id == target_channel.id:
                     embed = create_success_embed(
                         title="Connected",
                         message=f"Connected to {target_channel.mention}.",
@@ -44,7 +44,12 @@ class VoiceCog(commands.Cog):
                     return
                 await voice_client.move_to(target_channel)
             else:
-                await target_channel.connect(timeout=15.0, reconnect=True, self_deaf=True)
+                if voice_client:
+                    try:
+                        await voice_client.disconnect(force=True)
+                    except Exception:
+                        pass
+                await target_channel.connect(timeout=20.0, reconnect=True, self_deaf=True)
 
             embed = create_success_embed(
                 title="Connected",

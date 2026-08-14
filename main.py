@@ -49,6 +49,13 @@ async def on_ready():
         if app_info.owner:
             config.add_owner(app_info.owner.id)
 
+    if not discord.opus.is_loaded():
+        try:
+            discord.opus._load_default()
+            logger.info("Opus audio library loaded successfully.")
+        except Exception as opus_err:
+            logger.warning(f"Opus audio library not found in default search paths: {opus_err}")
+
     try:
         synced = await bot.tree.sync()
         logger.info(f"Connected as {bot.user} (ID: {bot.user.id}). Synchronized {len(synced)} application commands.")

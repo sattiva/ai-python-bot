@@ -38,6 +38,8 @@ def filter_speech_text(text: str, filters: dict | None = None) -> str:
         cleaned = re.sub(r"\{[^}]*\}", "", cleaned)
 
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if not cleaned and text:
+        cleaned = re.sub(r"[`*\[\]{}()]", "", text).strip()
     return cleaned
 
 async def synthesize_speech(

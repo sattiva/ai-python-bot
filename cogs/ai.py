@@ -123,6 +123,7 @@ class AICog(commands.Cog):
 
         await send_container_response(ctx, container, view=voice_view, bot=self.bot)
 
+        voice_client = ctx.guild.voice_client if ctx.guild else None
         if voice_client and voice_client.is_connected():
             tts_settings = self.config.get("tts_settings", {})
             tts_provider = tts_settings.get("provider", "deepgram")
@@ -130,7 +131,9 @@ class AICog(commands.Cog):
             voice_id = tts_settings.get("voice_id", "aura-asteria-en")
             tts_filters = self.config.get("tts_filters", {"asterisks": True, "brackets": True, "code": True})
 
-            if tts_key:
+            if not tts_key:
+                logger.warning(f"TTS API key missing for provider '{tts_provider}'")
+            else:
                 logger.info(f"Synthesizing voice via {tts_provider} ({voice_id})")
                 tts_err, audio_bytes = await synthesize_speech(
                     provider=tts_provider,
@@ -142,11 +145,17 @@ class AICog(commands.Cog):
                 if tts_err:
                     logger.error(f"TTS synthesis error: {tts_err}")
                 elif audio_bytes:
-                    if voice_client.is_playing():
-                        voice_client.stop()
-                    audio_source = create_audio_source(audio_bytes)
-                    voice_client.play(audio_source)
-                    logger.info("Voice audio streamed to channel")
+                    try:
+                        if voice_client.is_playing():
+                            voice_client.stop()
+                        audio_source = create_audio_source(audio_bytes)
+                        voice_client.play(
+                            audio_source,
+                            after=lambda err: logger.error(f"Voice playback error: {err}") if err else None
+                        )
+                        logger.info("Voice audio streamed to channel")
+                    except Exception as play_exc:
+                        logger.error(f"Voice playback initialization failed: {play_exc}")
 
     @commands.command(name="ai")
     async def ai_prefix(self, ctx: commands.Context, *, prompt: str = ""):
