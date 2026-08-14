@@ -45,8 +45,6 @@ class StatsCog(commands.Cog):
             f"**Active Cooldown:** `{rate_limit_seconds}s`\n"
             f"**Active Guilds:** `{len(self.bot.guilds)}`"
         )
-        container.add_separator(divider=True)
-        container.add_text("-# Architecture: discord.py v2.7 & Containers V2")
 
         await send_container_response(interaction, container, ephemeral=True, bot=self.bot)
 

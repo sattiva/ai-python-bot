@@ -125,8 +125,6 @@ class HelpSelect(Select):
                 f"**Command:** `/help` / `{self.cmd_prefix}help`\n"
                 "**Description:** Interactive category help menu."
             )
-            container.add_separator(divider=True)
-            container.add_text("-# Built with discord.py v2.7 & Containers V2.")
 
         else:
             active_p = self.config.get("active_provider", "gemini")
@@ -139,8 +137,6 @@ class HelpSelect(Select):
                 f"**Model:** `{active_m}`\n\n"
                 "Select a category from the dropdown menu below to view specific commands."
             )
-            container.add_separator(divider=True)
-            container.add_text("-# Containers V2 Architecture")
 
         options = [
             select_option("Overview", "overview", "General system summary", default=(category == "overview")),
