@@ -29,59 +29,75 @@ class HelpSelect(Select):
 
     def _build_category_embed(self, category: str, color: int) -> discord.Embed:
         if category == "ai":
-            fields = [
-                (f"{self.cmd_prefix}ai [prompt] [attachments]", "Submit query with optional file attachment", False),
-                (f"{self.cmd_prefix}ask [prompt] [attachments]", "Submit query with optional file attachment", False),
-                ("/ai model [provider] [model]", "Switch or view active model", False),
-                ("/ai history <view|clear|export>", "Manage conversational logs", False),
-                ("/ai summarize [target] [lines]", "Generate message summary", False)
-            ]
-            return create_embed(title="AI Commands", color=color, fields=fields)
+            desc = (
+                "### AI Generation & Analysis\n"
+                f"> `{self.cmd_prefix}ai [prompt] [attachments]`\n"
+                "> Query active model with optional file or OCR image attachments.\n\n"
+                f"> `{self.cmd_prefix}ask [prompt] [attachments]`\n"
+                "> Alias for AI text and multimodal queries.\n\n"
+                "> `/ai model [provider] [model]`\n"
+                "> Inspect active provider/model or switch model.\n\n"
+                "> `/ai history <view|clear|export>`\n"
+                "> Manage conversational memory context.\n\n"
+                "> `/ai summarize [target] [lines]`\n"
+                "> Generate executive summary of recent messages.\n"
+                "-# Attachments supported: images (OCR/vision), code, logs, and text documents."
+            )
+            return create_embed(description=desc, color=color)
 
         if category == "voice":
-            fields = [
-                ("/join", "Connect bot to active voice channel", False),
-                ("/leave", "Disconnect bot from voice channel", False)
-            ]
-            return create_embed(title="Voice Commands", color=color, fields=fields)
+            desc = (
+                "### Voice Channel Interface\n"
+                "> `/join`\n"
+                "> Connect bot to your active voice channel.\n\n"
+                "> `/leave`\n"
+                "> Disconnect bot from the voice channel.\n\n"
+                "> `❌ Stop Audio`\n"
+                "> Interactive button attached to AI responses to terminate speech live.\n"
+                "-# Supports Deepgram, OpenAI TTS, and ElevenLabs speech engines."
+            )
+            return create_embed(description=desc, color=color)
 
         if category == "settings":
-            fields = [
-                ("/set prefix <prefix>", "Update command prefix", False),
-                ("/set provider <provider>", "Set default provider", False),
-                ("/set memory <count>", "Set conversation context limit", False),
-                ("/set owner <add|remove> <user>", "Manage bot owners", False),
-                ("/set api_key <provider> <key>", "Save provider credentials", False),
-                ("/set channel <channel> <allow|remove>", "Configure allowed channels", False),
-                ("/set cooldown <action> [seconds] [user] [role]", "Configure cooldown & bypasses", False),
-                ("/set tts [provider] [voice] [filter] [enabled]", "Configure voice & speech filters", False),
-                ("/set embed [color] [mode]", "Configure appearance", False),
-                ("/set usage_limit <type> <id> <limit>", "Set daily quota", False),
-                ("/set prompt <view|set|clear> [text] [scope]", "Manage system prompts", False)
-            ]
-            return create_embed(title="Settings Commands", color=color, fields=fields)
+            desc = (
+                "### Settings & Administration\n"
+                "> `/set prefix <prefix>` — Set custom command prefix.\n"
+                "> `/set provider <provider>` — Change default LLM provider.\n"
+                "> `/set memory <count>` — Set conversation message retention limit.\n"
+                "> `/set owner <add|remove> <user>` — Manage bot administrators.\n"
+                "> `/set api_key <provider> <key>` — Save API credentials.\n"
+                "> `/set channel <channel> <allow|remove>` — Whitelist channels.\n"
+                "> `/set cooldown <action> [seconds] [user] [role]` — Manage rate limits.\n"
+                "> `/set tts [provider] [voice] [filter] [enabled]` — Configure voice.\n"
+                "> `/set embed [color] [mode]` — Configure theme and appearance.\n"
+                "> `/set usage_limit <type> <id> <limit>` — Daily request quota.\n"
+                "> `/set prompt <view|set|clear> [text] [scope]` — System instructions.\n"
+                "-# Restricted to configured owner user IDs."
+            )
+            return create_embed(description=desc, color=color)
 
         if category == "system":
-            fields = [
-                ("/stats", "Display latencies, memory, voice state, and query count", False),
-                (f"{self.cmd_prefix}help / /help", "Display command guide and options", False)
-            ]
-            return create_embed(title="System Commands", color=color, fields=fields)
+            desc = (
+                "### Diagnostics & Telemetry\n"
+                "> `/stats`\n"
+                "> View gateway latency, memory usage, voice status, and query count.\n\n"
+                f"> `/help` or `{self.cmd_prefix}help`\n"
+                "> Display interactive command guide.\n"
+                "-# Built with discord.py v2.7 & Containers V2."
+            )
+            return create_embed(description=desc, color=color)
 
         active_p = self.config.get("active_provider", "gemini")
         active_m = self.config.get("active_model", "gemini-3.5-flash")
-        fields = [
-            ("Prefix", f"`{self.cmd_prefix}`", True),
-            ("Provider", f"`{active_p}`", True),
-            ("Model", f"`{active_m}`", True),
-            ("Categories", "Use the selector below to view specific command groups.", False)
-        ]
-        return create_embed(
-            title="Help Menu",
-            description="Select a category from the dropdown to view available commands.",
-            color=color,
-            fields=fields
+        desc = (
+            "### Command Guide & Navigation\n"
+            f"> **Prefix**: `{self.cmd_prefix}`\n"
+            f"> **Provider**: `{active_p}`\n"
+            f"> **Model**: `{active_m}`\n\n"
+            "Select a category from the dropdown menu below to view detailed command references.\n"
+            "-# Containers V2 Interface"
         )
+        return create_embed(description=desc, color=color)
 
 class HelpView(View):
     def __init__(self, config: ConfigManager, prefix: str, timeout: float = 180.0):
@@ -101,42 +117,36 @@ class HelpCog(commands.Cog):
         active_p = self.config.get("active_provider", "gemini")
         active_m = self.config.get("active_model", "gemini-3.5-flash")
 
-        fields = [
-            ("Prefix", f"`{prefix}`", True),
-            ("Provider", f"`{active_p}`", True),
-            ("Model", f"`{active_m}`", True),
-            ("Categories", "Use the selector below to view specific command groups.", False)
-        ]
-
-        embed = create_embed(
-            title="Help Menu",
-            description="Select a category from the dropdown to view available commands.",
-            color=color,
-            fields=fields
+        desc = (
+            "### Command Guide & Navigation\n"
+            f"> **Prefix**: `{prefix}`\n"
+            f"> **Provider**: `{active_p}`\n"
+            f"> **Model**: `{active_m}`\n\n"
+            "Select a category from the dropdown menu below to view detailed command references.\n"
+            "-# Containers V2 Interface"
         )
+
+        embed = create_embed(description=desc, color=color)
         view = HelpView(self.config, prefix)
         await ctx.reply(embed=embed, view=view, mention_author=False)
 
-    @app_commands.command(name="help", description="Display command guide and options")
+    @app_commands.command(name="help", description="Guide")
     async def help_slash(self, interaction: discord.Interaction):
         prefix = self.config.get_prefix()
         color = self.config.get_embed_color()
         active_p = self.config.get("active_provider", "gemini")
         active_m = self.config.get("active_model", "gemini-3.5-flash")
 
-        fields = [
-            ("Prefix", f"`{prefix}`", True),
-            ("Provider", f"`{active_p}`", True),
-            ("Model", f"`{active_m}`", True),
-            ("Categories", "Use the selector below to view specific command groups.", False)
-        ]
-
-        embed = create_embed(
-            title="Help Menu",
-            description="Select a category from the dropdown to view available commands.",
-            color=color,
-            fields=fields
+        desc = (
+            "### Command Guide & Navigation\n"
+            f"> **Prefix**: `{prefix}`\n"
+            f"> **Provider**: `{active_p}`\n"
+            f"> **Model**: `{active_m}`\n\n"
+            "Select a category from the dropdown menu below to view detailed command references.\n"
+            "-# Containers V2 Interface"
         )
+
+        embed = create_embed(description=desc, color=color)
         view = HelpView(self.config, prefix)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 

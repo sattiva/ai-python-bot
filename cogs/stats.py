@@ -34,19 +34,20 @@ class StatsCog(commands.Cog):
 
         rate_limit_seconds = self.config.get("rate_limits", {}).get("seconds", 5)
 
-        fields = [
-            ("Latency", f"{latency_ms} ms", True),
-            ("Memory", f"{memory_usage_mb:.2f} MB", True),
-            ("Voice", voice_status, True),
-            ("Queries", str(total_prompts), True),
-            ("Cooldown", f"{rate_limit_seconds}s", True),
-            ("Servers", str(len(self.bot.guilds)), True)
-        ]
+        description = (
+            f"### Telemetry & Diagnostics\n"
+            f"> **Gateway Latency**: `{latency_ms} ms`\n"
+            f"> **Memory Usage**: `{memory_usage_mb:.2f} MB`\n"
+            f"> **Voice State**: `{voice_status}`\n"
+            f"> **Total Queries**: `{total_prompts}`\n"
+            f"> **Cooldown**: `{rate_limit_seconds}s`\n"
+            f"> **Active Guilds**: `{len(self.bot.guilds)}`\n"
+            f"-# Architecture: discord.py v2.7 / Containers V2"
+        )
 
         embed = create_embed(
-            title="Stats",
-            color=self.config.get_embed_color(),
-            fields=fields
+            description=description,
+            color=self.config.get_embed_color()
         )
 
         await interaction.response.send_message(embed=embed, ephemeral=True)

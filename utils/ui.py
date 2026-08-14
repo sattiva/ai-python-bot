@@ -1,5 +1,5 @@
 import discord
-from discord.ui import View, Button
+from discord.ui import View, Button, Select
 
 class ResponseView(View):
     def __init__(self, timeout: float = 180.0):
@@ -10,12 +10,12 @@ class VoiceControlView(View):
         super().__init__(timeout=timeout)
         self.voice_client = voice_client
 
-    @discord.ui.button(label="Stop", style=discord.ButtonStyle.secondary, emoji="❌")
+    @discord.ui.button(label="Stop Audio", style=discord.ButtonStyle.secondary, emoji="❌")
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.voice_client and self.voice_client.is_connected() and self.voice_client.is_playing():
             self.voice_client.stop()
             button.disabled = True
-            button.label = "Stopped"
+            button.label = "Audio Stopped"
             button.style = discord.ButtonStyle.danger
             await interaction.response.edit_message(view=self)
         else:
@@ -25,6 +25,15 @@ class VoiceControlView(View):
     async def on_timeout(self):
         for item in self.children:
             item.disabled = True
+
+def format_container_text(title: str | None, body: str, footer: str | None = None) -> str:
+    parts = []
+    if title:
+        parts.append(f"### {title}")
+    parts.append(body)
+    if footer:
+        parts.append(f"-# {footer}")
+    return "\n".join(parts)
 
 def create_embed(
     title: str | None = None,
@@ -52,13 +61,13 @@ def create_embed(
 def create_error_embed(message: str, color: int = 0x2B2D31) -> discord.Embed:
     return create_embed(
         title="Error",
-        description=message,
+        description=f"> {message}",
         color=color
     )
 
 def create_success_embed(title: str, message: str, color: int = 0x2B2D31) -> discord.Embed:
     return create_embed(
         title=title,
-        description=message,
+        description=f"> {message}",
         color=color
     )
