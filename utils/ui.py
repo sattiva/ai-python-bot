@@ -1,9 +1,30 @@
 import discord
-from discord.ui import View
+from discord.ui import View, Button
 
 class ResponseView(View):
     def __init__(self, timeout: float = 180.0):
         super().__init__(timeout=timeout)
+
+class VoiceControlView(View):
+    def __init__(self, voice_client: discord.VoiceClient, timeout: float = 120.0):
+        super().__init__(timeout=timeout)
+        self.voice_client = voice_client
+
+    @discord.ui.button(label="Stop", style=discord.ButtonStyle.secondary, emoji="❌")
+    async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.voice_client and self.voice_client.is_connected() and self.voice_client.is_playing():
+            self.voice_client.stop()
+            button.disabled = True
+            button.label = "Stopped"
+            button.style = discord.ButtonStyle.danger
+            await interaction.response.edit_message(view=self)
+        else:
+            button.disabled = True
+            await interaction.response.edit_message(view=self)
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
 
 def create_embed(
     title: str | None = None,

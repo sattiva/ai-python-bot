@@ -7,7 +7,7 @@ import base64
 from utils.config import ConfigManager
 from utils.providers import generate_response
 from utils.tts import synthesize_speech, create_audio_source
-from utils.ui import create_embed, create_error_embed, create_success_embed
+from utils.ui import create_embed, create_error_embed, create_success_embed, VoiceControlView
 
 import logging
 logger = logging.getLogger("AI")
@@ -115,19 +115,26 @@ class AICog(commands.Cog):
         color = self.config.get_embed_color()
         embed_mode = self.config.get("embed_settings", {}).get("mode", "standard")
 
+        voice_client = ctx.guild.voice_client if ctx.guild else None
+        voice_view = VoiceControlView(voice_client) if (voice_client and voice_client.is_connected()) else None
+
         if len(response_text) <= 4000 and embed_mode != "plain":
             embed = create_embed(
                 description=response_text,
                 color=color,
                 footer=f"{provider} / {model}"
             )
-            await ctx.reply(embed=embed, mention_author=False)
+            if voice_view:
+                await ctx.reply(embed=embed, view=voice_view, mention_author=False)
+            else:
+                await ctx.reply(embed=embed, mention_author=False)
         else:
             chunks = [response_text[i:i + 1900] for i in range(0, len(response_text), 1900)]
-            for chunk in chunks:
-                await ctx.reply(chunk, mention_author=False)
-
-        voice_client = ctx.guild.voice_client if ctx.guild else None
+            for i, chunk in enumerate(chunks):
+                if i == len(chunks) - 1 and voice_view:
+                    await ctx.reply(chunk, view=voice_view, mention_author=False)
+                else:
+                    await ctx.reply(chunk, mention_author=False)
 
         if voice_client and voice_client.is_connected():
             tts_settings = self.config.get("tts_settings", {})

@@ -10,6 +10,15 @@ OPENAI_COMPATIBLE_ENDPOINTS = {
     "openrouter": "https://openrouter.ai/api/v1/chat/completions"
 }
 
+_session: aiohttp.ClientSession | None = None
+
+def get_http_session() -> aiohttp.ClientSession:
+    global _session
+    if _session is None or _session.closed:
+        connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, keepalive_timeout=60)
+        _session = aiohttp.ClientSession(connector=connector)
+    return _session
+
 async def generate_response(
     provider: str,
     api_key: str,
@@ -96,18 +105,18 @@ async def _generate_openai_compatible(
         "temperature": 0.7
     }
 
+    session = get_http_session()
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(endpoint, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=60)) as resp:
-                if resp.status != 200:
-                    text = await resp.text()
-                    return f"HTTP {resp.status}: {text}", None
-                data = await resp.json()
-                choices = data.get("choices", [])
-                if not choices:
-                    return "No completions returned from provider.", None
-                content = choices[0].get("message", {}).get("content", "")
-                return None, content.strip()
+        async with session.post(endpoint, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=45)) as resp:
+            if resp.status != 200:
+                text = await resp.text()
+                return f"HTTP {resp.status}: {text}", None
+            data = await resp.json()
+            choices = data.get("choices", [])
+            if not choices:
+                return "No completions returned from provider.", None
+            content = choices[0].get("message", {}).get("content", "")
+            return None, content.strip()
     except Exception as exc:
         return str(exc), None
 
@@ -155,23 +164,23 @@ async def _generate_anthropic(
     if system_prompt:
         payload["system"] = system_prompt
 
+    session = get_http_session()
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.anthropic.com/v1/messages",
-                headers=headers,
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=60)
-            ) as resp:
-                if resp.status != 200:
-                    text = await resp.text()
-                    return f"HTTP {resp.status}: {text}", None
-                data = await resp.json()
-                content_blocks = data.get("content", [])
-                if not content_blocks:
-                    return "No content blocks returned from Anthropic.", None
-                text_result = content_blocks[0].get("text", "")
-                return None, text_result.strip()
+        async with session.post(
+            "https://api.anthropic.com/v1/messages",
+            headers=headers,
+            json=payload,
+            timeout=aiohttp.ClientTimeout(total=45)
+        ) as resp:
+            if resp.status != 200:
+                text = await resp.text()
+                return f"HTTP {resp.status}: {text}", None
+            data = await resp.json()
+            content_blocks = data.get("content", [])
+            if not content_blocks:
+                return "No content blocks returned from Anthropic.", None
+            text_result = content_blocks[0].get("text", "")
+            return None, text_result.strip()
     except Exception as exc:
         return str(exc), None
 
@@ -211,24 +220,24 @@ async def _generate_gemini(
 
     headers = {"Content-Type": "application/json"}
 
+    session = get_http_session()
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                url,
-                headers=headers,
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=60)
-            ) as resp:
-                if resp.status != 200:
-                    text = await resp.text()
-                    return f"HTTP {resp.status}: {text}", None
-                data = await resp.json()
-                candidates = data.get("candidates", [])
-                if not candidates:
-                    return "No candidates returned from Gemini.", None
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if not parts:
-                    return "No text parts returned from Gemini.", None
-                return None, parts[0].get("text", "").strip()
+        async with session.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=aiohttp.ClientTimeout(total=45)
+        ) as resp:
+            if resp.status != 200:
+                text = await resp.text()
+                return f"HTTP {resp.status}: {text}", None
+            data = await resp.json()
+            candidates = data.get("candidates", [])
+            if not candidates:
+                return "No candidates returned from Gemini.", None
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if not parts:
+                return "No text parts returned from Gemini.", None
+            return None, parts[0].get("text", "").strip()
     except Exception as exc:
         return str(exc), None

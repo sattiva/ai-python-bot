@@ -4,6 +4,7 @@ import shutil
 import re
 import discord
 import imageio_ffmpeg
+from utils.providers import get_http_session
 
 def get_ffmpeg_binary() -> str:
     which_path = shutil.which("ffmpeg")
@@ -86,14 +87,14 @@ async def synthesize_speech(
     else:
         return f"Unsupported TTS provider: {provider}", None
 
+    session = get_http_session()
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
-                if resp.status != 200:
-                    err_msg = await resp.text()
-                    return f"{provider.capitalize()} TTS failed (HTTP {resp.status}): {err_msg}", None
-                audio_data = await resp.read()
-                return None, audio_data
+        async with session.post(url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+            if resp.status != 200:
+                err_msg = await resp.text()
+                return f"{provider.capitalize()} TTS failed (HTTP {resp.status}): {err_msg}", None
+            audio_data = await resp.read()
+            return None, audio_data
     except Exception as exc:
         return str(exc), None
 
