@@ -175,7 +175,7 @@ All runtime settings are managed inside `config.json` or dynamically modified th
 | `/set preset` | `<preset_name: mommy_asmr\|default>` | One-click profile application: configure prompt, voice, speed, acoustic filters, and text filtering simultaneously. |
 | `/set embed` | `[color] [mode]` | Update default embed accent color (hex) and presentation format (standard / plain). |
 | `/set usage_limit` | `<target_type: user\|role> <target_id> <daily_quota>` | Enforce maximum daily request limits for users or roles. |
-| `/set prompt` | `<action: view\|set\|clear> [text] [scope: personal\|global]` | Configure system instructions globally or per-user. |
+| `/set prompt` | `<action: view\|set\|clear> [text] [file] [scope: personal\|global]` | Configure system instructions globally or per-user via text input or text file upload (`.txt`, `.md`, `.json`). |
 
 ### System Commands
 

@@ -493,6 +493,7 @@ class AdminCog(commands.Cog):
     @app_commands.describe(
         action="Action: view, set, or clear",
         text="Prompt text (for set action)",
+        file="Text file (.txt, .md, .json) containing prompt",
         scope="Scope: personal or global (owners only)"
     )
     @app_commands.choices(action=[
@@ -508,6 +509,7 @@ class AdminCog(commands.Cog):
         interaction: discord.Interaction,
         action: str = "view",
         text: str | None = None,
+        file: discord.Attachment | None = None,
         scope: str = "personal"
     ):
         if not self.config.is_whitelisted(interaction.user, interaction.channel):
@@ -539,8 +541,20 @@ class AdminCog(commands.Cog):
             return
 
         if action == "set":
-            if not text or not text.strip():
-                embed = create_error_embed("Please provide prompt text.", self.config.get_embed_color())
+            resolved_text = text.strip() if text else ""
+            if file:
+                try:
+                    raw_bytes = await file.read()
+                    file_text = raw_bytes.decode("utf-8", errors="replace").strip()
+                    if file_text:
+                        resolved_text = f"{resolved_text}\n{file_text}".strip() if resolved_text else file_text
+                except Exception as file_err:
+                    embed = create_error_embed(f"Failed to read prompt file: {file_err}", self.config.get_embed_color())
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    return
+
+            if not resolved_text:
+                embed = create_error_embed("Please provide prompt text or upload a text file.", self.config.get_embed_color())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
 
@@ -549,16 +563,16 @@ class AdminCog(commands.Cog):
                     embed = create_error_embed("Unauthorized.", self.config.get_embed_color())
                     await interaction.response.send_message(embed=embed, ephemeral=True)
                     return
-                prompts["global"] = text.strip()
+                prompts["global"] = resolved_text
                 self.config.set("prompts", prompts)
-                embed = create_success_embed(title="Saved", message="Global prompt saved.", color=self.config.get_embed_color())
+                embed = create_success_embed(title="Saved", message=f"Global prompt saved ({len(resolved_text)} chars).", color=self.config.get_embed_color())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
 
             user_prompts = prompts.setdefault("users", {})
-            user_prompts[str(interaction.user.id)] = text.strip()
+            user_prompts[str(interaction.user.id)] = resolved_text
             self.config.set("prompts", prompts)
-            embed = create_success_embed(title="Saved", message="Personal prompt saved.", color=self.config.get_embed_color())
+            embed = create_success_embed(title="Saved", message=f"Personal prompt saved ({len(resolved_text)} chars).", color=self.config.get_embed_color())
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @set_group.command(name="usage_limit", description="Quotas")

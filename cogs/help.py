@@ -108,7 +108,7 @@ class HelpSelect(Select):
                 "**Syntax:** `/set tts [provider] [voice] [speed] [audio_fx] [filter] [enabled]` — Voice & filters\n"
                 "**Syntax:** `/set preset <mommy_asmr|default>` — One-click voice & prompt profiles\n"
                 "**Syntax:** `/set embed [color] [mode]` — Appearance\n"
-                "**Syntax:** `/set prompt <view|set|clear> [text] [scope]` — System prompts"
+                "**Syntax:** `/set prompt <view|set|clear> [text] [file] [scope]` — System prompts"
             )
             container.add_separator(divider=True)
             container.add_text("-# Restricted to configured owner user IDs.")
