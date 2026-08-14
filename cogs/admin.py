@@ -307,6 +307,7 @@ class AdminCog(commands.Cog):
         provider="TTS provider",
         voice="Voice identifier",
         speed="Speech playback speed (e.g. 0.8, 1.0, 1.25)",
+        audio_fx="Acoustic audio FX filter",
         filter_target="Speech filter target to toggle",
         filter_enabled="Filter toggle state"
     )
@@ -314,6 +315,12 @@ class AdminCog(commands.Cog):
         app_commands.Choice(name="Deepgram", value="deepgram"),
         app_commands.Choice(name="OpenAI", value="openai"),
         app_commands.Choice(name="ElevenLabs", value="elevenlabs")
+    ], audio_fx=[
+        app_commands.Choice(name="None (Standard)", value="none"),
+        app_commands.Choice(name="Warm ASMR (Soft & Intimate)", value="warm_asmr"),
+        app_commands.Choice(name="Whisper / High Clarity", value="whisper"),
+        app_commands.Choice(name="Soft Lowpass", value="soft_lowpass"),
+        app_commands.Choice(name="Bass Boost", value="bass_boost")
     ], filter_target=[
         app_commands.Choice(name="asterisks (*text*)", value="asterisks"),
         app_commands.Choice(name="brackets ([text])", value="brackets"),
@@ -328,6 +335,7 @@ class AdminCog(commands.Cog):
         provider: str | None = None,
         voice: str | None = None,
         speed: float | None = None,
+        audio_fx: str | None = None,
         filter_target: str | None = None,
         filter_enabled: bool | None = None
     ):
@@ -352,7 +360,11 @@ class AdminCog(commands.Cog):
             tts_settings["speed"] = clamped_speed
             changes.append(f"Speed: `{clamped_speed}x`")
 
-        if provider or voice or (speed is not None):
+        if audio_fx is not None:
+            tts_settings["audio_fx"] = audio_fx
+            changes.append(f"Audio FX: `{audio_fx}`")
+
+        if provider or voice or (speed is not None) or (audio_fx is not None):
             self.config.set("tts_settings", tts_settings)
 
         if filter_target is not None:
@@ -377,9 +389,10 @@ class AdminCog(commands.Cog):
             curr_p = tts_settings.get("provider", "deepgram")
             curr_v = tts_settings.get("voice_id", "aura-asteria-en")
             curr_s = tts_settings.get("speed", 1.0)
+            curr_f = tts_settings.get("audio_fx", "none")
             embed = create_embed(
                 title="TTS Configuration",
-                description=f"Provider: `{curr_p}`\nVoice: `{curr_v}`\nSpeed: `{curr_s}x`",
+                description=f"Provider: `{curr_p}`\nVoice: `{curr_v}`\nSpeed: `{curr_s}x`\nAudio FX: `{curr_f}`",
                 color=self.config.get_embed_color()
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -391,6 +404,90 @@ class AdminCog(commands.Cog):
             color=self.config.get_embed_color()
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @set_group.command(name="preset", description="Apply quick experience presets")
+    @app_commands.describe(preset_name="Preset configuration profile")
+    @app_commands.choices(preset_name=[
+        app_commands.Choice(name="Mommy ASMR (Comforting, Slow, Warm Voice & Prompt)", value="mommy_asmr"),
+        app_commands.Choice(name="Default Assistant (Fast, Standard Factual Prompt)", value="default")
+    ])
+    async def set_preset(self, interaction: discord.Interaction, preset_name: str):
+        if not self.config.is_owner(interaction.user.id):
+            embed = create_error_embed("Unauthorized.", self.config.get_embed_color())
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        tts_settings = self.config.get("tts_settings", {})
+        prompts = self.config.get("prompts", {})
+
+        if preset_name == "mommy_asmr":
+            tts_settings["provider"] = "deepgram"
+            tts_settings["voice_id"] = "aura-asteria-en"
+            tts_settings["speed"] = 0.82
+            tts_settings["audio_fx"] = "warm_asmr"
+            self.config.set("tts_settings", tts_settings)
+
+            mommy_prompt = (
+                "Act as a deeply caring, warm, and soothing maternal figure. "
+                "I am feeling tired, stressed, and overwhelmed right now. "
+                "Please talk to me in a gentle, slow, and comforting tone. "
+                "Use soft, reassuring language, tell me that it's okay to rest, "
+                "and remind me that I'm doing a good job. You can include gentle actions in asterisks "
+                "(like stroking your hair or wrapping a warm blanket around you) to make the experience feel safe and cozy. "
+                "Keep your response purely comforting, loving, and peaceful."
+            )
+            prompts["global"] = mommy_prompt
+            user_prompts = prompts.setdefault("users", {})
+            user_prompts[str(interaction.user.id)] = mommy_prompt
+            self.config.set("prompts", prompts)
+
+            current_filters = self.config.get("tts_filters", {
+                "asterisks": True,
+                "brackets": True,
+                "parentheses": True,
+                "braces": True,
+                "code": True
+            })
+            current_filters["asterisks"] = True
+            current_filters["code"] = True
+            self.config.set("tts_filters", current_filters)
+
+            embed = create_success_embed(
+                title="Mommy ASMR Preset Applied",
+                message=(
+                    "**Voice:** Deepgram (`aura-asteria-en`)\n"
+                    "**Speed:** `0.82x` (Relaxed & Soothing)\n"
+                    "**Audio FX:** `Warm ASMR` (Soft Lowpass + EQ + Dynamic Warmth)\n"
+                    "**Speech Filters:** Asterisks / actions filtered from voice\n"
+                    "**Prompt:** Maternal Comfort & Soothing Active"
+                ),
+                color=self.config.get_embed_color()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        elif preset_name == "default":
+            tts_settings["provider"] = "deepgram"
+            tts_settings["voice_id"] = "aura-asteria-en"
+            tts_settings["speed"] = 1.0
+            tts_settings["audio_fx"] = "none"
+            self.config.set("tts_settings", tts_settings)
+
+            default_prompt = "You are a concise, direct, and helpful assistant. Provide factual and well-structured answers."
+            prompts["global"] = default_prompt
+            user_prompts = prompts.setdefault("users", {})
+            user_key = str(interaction.user.id)
+            if user_key in user_prompts:
+                del user_prompts[user_key]
+            self.config.set("prompts", prompts)
+
+            embed = create_success_embed(
+                title="Default Preset Restored",
+                message="Voice speed set to `1.0x`, FX set to `none`, and standard assistant prompt restored.",
+                color=self.config.get_embed_color()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
 
     @set_group.command(name="prompt", description="System prompts")
     @app_commands.describe(

@@ -31,7 +31,8 @@
   "tts_settings": {
     "provider": "deepgram",
     "voice_id": "aura-asteria-en",
-    "speed": 1.0
+    "speed": 1.0,
+    "audio_fx": "none"
   },
   "embed_settings": {
     "color": "0x2B2D31",

@@ -130,12 +130,13 @@ class AICog(commands.Cog):
             tts_key = self.config.get_api_key(tts_provider)
             voice_id = tts_settings.get("voice_id", "aura-asteria-en")
             tts_speed = float(tts_settings.get("speed", 1.0))
+            tts_fx = tts_settings.get("audio_fx", "none")
             tts_filters = self.config.get("tts_filters", {"asterisks": True, "brackets": True, "code": True})
 
             if not tts_key:
                 logger.warning(f"TTS API key missing for provider '{tts_provider}'")
             else:
-                logger.info(f"Synthesizing voice via {tts_provider} ({voice_id}, speed={tts_speed}x)")
+                logger.info(f"Synthesizing voice via {tts_provider} ({voice_id}, speed={tts_speed}x, fx={tts_fx})")
                 tts_err, audio_bytes = await synthesize_speech(
                     provider=tts_provider,
                     api_key=tts_key,
@@ -150,7 +151,7 @@ class AICog(commands.Cog):
                     try:
                         if voice_client.is_playing():
                             voice_client.stop()
-                        audio_source = create_audio_source(audio_bytes, speed=tts_speed)
+                        audio_source = create_audio_source(audio_bytes, speed=tts_speed, audio_fx=tts_fx)
                         voice_client.play(
                             audio_source,
                             after=lambda err: logger.error(f"Voice playback error: {err}") if err else None

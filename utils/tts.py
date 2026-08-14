@@ -102,10 +102,26 @@ async def synthesize_speech(
     except Exception as exc:
         return str(exc), None
 
-def create_audio_source(audio_bytes: bytes, speed: float = 1.0) -> discord.AudioSource:
+def create_audio_source(audio_bytes: bytes, speed: float = 1.0, audio_fx: str = "none") -> discord.AudioSource:
     ffmpeg_exe = get_ffmpeg_binary()
-    options = None
+    filters = []
+
+    if audio_fx == "warm_asmr":
+        filters.append("lowpass=f=3600")
+        filters.append("equalizer=f=250:t=q:w=1.5:g=3")
+        filters.append("acompressor=threshold=-24dB:ratio=3:attack=5:release=50")
+    elif audio_fx == "soft_lowpass":
+        filters.append("lowpass=f=3800")
+    elif audio_fx == "whisper":
+        filters.append("highpass=f=200")
+        filters.append("lowpass=f=4200")
+        filters.append("acompressor=threshold=-28dB:ratio=4:attack=5:release=40")
+    elif audio_fx == "bass_boost":
+        filters.append("equalizer=f=120:t=q:w=1.2:g=5")
+
     if speed and abs(speed - 1.0) > 0.01:
         clamped_speed = max(0.5, min(2.0, speed))
-        options = f"-filter:a atempo={clamped_speed:.2f}"
+        filters.append(f"atempo={clamped_speed:.2f}")
+
+    options = f"-filter:a {','.join(filters)}" if filters else None
     return discord.FFmpegPCMAudio(io.BytesIO(audio_bytes), pipe=True, executable=ffmpeg_exe, options=options)

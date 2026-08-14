@@ -105,7 +105,8 @@ class HelpSelect(Select):
                 "**Syntax:** `/set api_key <provider> <key>` — Save credentials\n"
                 "**Syntax:** `/set channel <channel> <allow|remove>` — Whitelist channels\n"
                 "**Syntax:** `/set cooldown <action> [seconds] [user] [role]` — Rate limits\n"
-                "**Syntax:** `/set tts [provider] [voice] [speed] [filter] [enabled]` — Voice & filters\n"
+                "**Syntax:** `/set tts [provider] [voice] [speed] [audio_fx] [filter] [enabled]` — Voice & filters\n"
+                "**Syntax:** `/set preset <mommy_asmr|default>` — One-click voice & prompt profiles\n"
                 "**Syntax:** `/set embed [color] [mode]` — Appearance\n"
                 "**Syntax:** `/set prompt <view|set|clear> [text] [scope]` — System prompts"
             )
