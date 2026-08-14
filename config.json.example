@@ -1,0 +1,64 @@
+{
+  "owner_ids": [
+    423953946827161610
+  ],
+  "default_embed_color": "0x2B2D31",
+  "api_keys": {
+    "groq": "",
+    "gemini": "",
+    "deepseek": "",
+    "anthropic": "",
+    "openai": "",
+    "together": "",
+    "openrouter": "",
+    "deepgram": "",
+    "elevenlabs": ""
+  },
+  "whitelists": {
+    "users": [],
+    "roles": [],
+    "channels": []
+  },
+  "prompts": {
+    "global": "You are a concise, direct, and helpful assistant. Provide factual and well-structured answers.",
+    "users": {}
+  },
+  "rate_limits": {
+    "seconds": 5,
+    "bypass_users": [],
+    "bypass_roles": []
+  },
+  "tts_settings": {
+    "provider": "deepgram",
+    "voice_id": "aura-asteria-en"
+  },
+  "embed_settings": {
+    "color": "0x2B2D31",
+    "mode": "standard"
+  },
+  "active_models": {
+    "groq": "llama-3.3-70b-versatile",
+    "gemini": "gemini-2.5-flash",
+    "deepseek": "deepseek-chat",
+    "anthropic": "claude-3-5-sonnet-20241022",
+    "openai": "gpt-4o-mini",
+    "together": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+    "openrouter": "openai/gpt-4o-mini"
+  },
+  "active_provider": "gemini",
+  "active_model": "gemini-2.5-flash",
+  "usage_limits": {
+    "users": {},
+    "roles": {}
+  },
+  "usage_tracking": {},
+  "prefix": ".",
+  "memory_limit": 6,
+  "tts_filters": {
+    "asterisks": true,
+    "brackets": true,
+    "parentheses": false,
+    "braces": false,
+    "code": true
+  }
+}
