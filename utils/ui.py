@@ -1,6 +1,6 @@
 import discord
 from discord.ui import View, Button, Select
-from discord.http import Route, MultipartParameters
+from discord.http import Route
 
 FLAG_COMPONENTS_V2 = 1 << 15
 
@@ -75,36 +75,36 @@ async def send_container_response(
     container_dict = container.to_dict()
 
     if isinstance(target, discord.Interaction):
-        if not target.response.is_done():
-            try:
-                payload = {
-                    "type": 4,
-                    "data": {
+        adapter = getattr(target._client._connection, "http", None)
+        if adapter:
+            if not target.response.is_done():
+                try:
+                    payload = {
+                        "type": 4,
+                        "data": {
+                            "flags": FLAG_COMPONENTS_V2 | (64 if ephemeral else 0),
+                            "components": [container_dict]
+                        }
+                    }
+                    route = Route("POST", "/interactions/{interaction_id}/{interaction_token}/callback", interaction_id=target.id, interaction_token=target.token)
+                    await adapter.request(route, json=payload)
+                    return None
+                except Exception:
+                    pass
+            else:
+                try:
+                    payload = {
                         "flags": FLAG_COMPONENTS_V2 | (64 if ephemeral else 0),
                         "components": [container_dict]
                     }
-                }
-                adapter = target._client._connection.http
-                route = Route("POST", f"/interactions/{target.id}/{target.token}/callback")
-                await adapter.request(route, json=payload)
-                return None
-            except Exception:
-                pass
-        else:
-            try:
-                payload = {
-                    "flags": FLAG_COMPONENTS_V2 | (64 if ephemeral else 0),
-                    "components": [container_dict]
-                }
-                adapter = target._client._connection.http
-                route = Route("PATCH", f"/webhooks/{target.application_id}/{target.token}/messages/@original")
-                await adapter.request(route, json=payload)
-                return None
-            except Exception:
-                pass
+                    route = Route("PATCH", "/webhooks/{application_id}/{interaction_token}/messages/@original", application_id=target.application_id, interaction_token=target.token)
+                    await adapter.request(route, json=payload)
+                    return None
+                except Exception:
+                    pass
 
     channel = target.channel if hasattr(target, "channel") else target
-    http_client = bot.http if bot else (target._state.http if hasattr(target, "_state") else None)
+    http_client = getattr(bot, "http", None) if bot else (getattr(target, "_state", None).http if hasattr(target, "_state") else None)
 
     if http_client and hasattr(channel, "id"):
         try:
@@ -118,9 +118,9 @@ async def send_container_response(
                     "channel_id": channel.id,
                     "fail_if_not_exists": False
                 }
-            params = MultipartParameters(payload=payload)
-            msg_data = await http_client.send_message(channel.id, params=params)
-            state = target._state if hasattr(target, "_state") else bot._connection
+            route = Route("POST", "/channels/{channel_id}/messages", channel_id=channel.id)
+            msg_data = await http_client.request(route, json=payload)
+            state = getattr(target, "_state", None) if hasattr(target, "_state") else getattr(bot, "_connection", None)
             return discord.Message(state=state, channel=channel, data=msg_data)
         except Exception:
             pass

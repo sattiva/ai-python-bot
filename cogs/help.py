@@ -2,8 +2,9 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import View, Select
+from discord.http import Route
 from utils.config import ConfigManager
-from utils.ui import ContainerV2, send_container_response, build_fallback_embed
+from utils.ui import ContainerV2, send_container_response, build_fallback_embed, select_option, select_dict, FLAG_COMPONENTS_V2
 
 class HelpSelect(Select):
     def __init__(self, config: ConfigManager, prefix: str):
@@ -25,6 +26,23 @@ class HelpSelect(Select):
         category = self.values[0]
         color = self.config.get_embed_color()
         container = self._build_category_container(category, color)
+
+        adapter = getattr(interaction._client._connection, "http", None)
+        if adapter:
+            try:
+                payload = {
+                    "type": 7,
+                    "data": {
+                        "flags": FLAG_COMPONENTS_V2,
+                        "components": [container.to_dict()]
+                    }
+                }
+                route = Route("POST", "/interactions/{interaction_id}/{interaction_token}/callback", interaction_id=interaction.id, interaction_token=interaction.token)
+                await adapter.request(route, json=payload)
+                return
+            except Exception:
+                pass
+
         embed = build_fallback_embed(container)
         await interaction.response.edit_message(embed=embed, view=self.view)
 
@@ -53,9 +71,8 @@ class HelpSelect(Select):
             )
             container.add_separator(divider=True)
             container.add_text("-# Multimodal OCR & Vision supported across providers.")
-            return container
 
-        if category == "voice":
+        elif category == "voice":
             container.add_text("## Voice Channel Controls")
             container.add_separator(divider=True)
             container.add_text(
@@ -76,9 +93,8 @@ class HelpSelect(Select):
             )
             container.add_separator(divider=True)
             container.add_text("-# Synthesizers: Deepgram, OpenAI TTS, ElevenLabs.")
-            return container
 
-        if category == "settings":
+        elif category == "settings":
             container.add_text("## Settings & Configuration")
             container.add_separator(divider=True)
             container.add_text(
@@ -95,9 +111,8 @@ class HelpSelect(Select):
             )
             container.add_separator(divider=True)
             container.add_text("-# Restricted to configured owner user IDs.")
-            return container
 
-        if category == "system":
+        elif category == "system":
             container.add_text("## Diagnostics & Metrics")
             container.add_separator(divider=True)
             container.add_text(
@@ -112,20 +127,31 @@ class HelpSelect(Select):
             )
             container.add_separator(divider=True)
             container.add_text("-# Built with discord.py v2.7 & Containers V2.")
-            return container
 
-        active_p = self.config.get("active_provider", "gemini")
-        active_m = self.config.get("active_model", "gemini-3.5-flash")
-        container.add_text("## Command Guide & Overview")
-        container.add_separator(divider=True)
-        container.add_text(
-            f"**Prefix:** `{self.cmd_prefix}`\n"
-            f"**Provider:** `{active_p}`\n"
-            f"**Model:** `{active_m}`\n\n"
-            "Select a category from the dropdown menu below to view specific commands."
-        )
-        container.add_separator(divider=True)
-        container.add_text("-# Containers V2 Architecture")
+        else:
+            active_p = self.config.get("active_provider", "gemini")
+            active_m = self.config.get("active_model", "gemini-3.5-flash")
+            container.add_text("## Command Guide & Overview")
+            container.add_separator(divider=True)
+            container.add_text(
+                f"**Prefix:** `{self.cmd_prefix}`\n"
+                f"**Provider:** `{active_p}`\n"
+                f"**Model:** `{active_m}`\n\n"
+                "Select a category from the dropdown menu below to view specific commands."
+            )
+            container.add_separator(divider=True)
+            container.add_text("-# Containers V2 Architecture")
+
+        options = [
+            select_option("Overview", "overview", "General system summary", default=(category == "overview")),
+            select_option("AI", "ai", "Text generation and analysis", default=(category == "ai")),
+            select_option("Voice", "voice", "Voice channel and audio playback", default=(category == "voice")),
+            select_option("Settings", "settings", "Administrative configuration", default=(category == "settings")),
+            select_option("System", "system", "Diagnostics and metrics", default=(category == "system"))
+        ]
+        select_menu = select_dict("help_category_select", options)
+        container.add_action_row([select_menu])
+
         return container
 
 class HelpView(View):
@@ -156,6 +182,31 @@ class HelpCog(commands.Cog):
         container = selector._build_category_container("overview", color)
         view = HelpView(self.config, prefix)
         await send_container_response(interaction, container, view=view, ephemeral=True, bot=self.bot)
+
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        if interaction.type == discord.InteractionType.component:
+            custom_id = interaction.data.get("custom_id")
+            if custom_id == "help_category_select":
+                values = interaction.data.get("values", [])
+                if values:
+                    category = values[0]
+                    prefix = self.config.get_prefix()
+                    color = self.config.get_embed_color()
+                    selector = HelpSelect(self.config, prefix)
+                    container = selector._build_category_container(category, color)
+
+                    adapter = getattr(interaction._client._connection, "http", None)
+                    if adapter:
+                        payload = {
+                            "type": 7,
+                            "data": {
+                                "flags": FLAG_COMPONENTS_V2,
+                                "components": [container.to_dict()]
+                            }
+                        }
+                        route = Route("POST", "/interactions/{interaction_id}/{interaction_token}/callback", interaction_id=interaction.id, interaction_token=interaction.token)
+                        await adapter.request(route, json=payload)
 
 async def setup(bot: commands.Bot):
     config: ConfigManager = bot.config
