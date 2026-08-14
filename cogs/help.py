@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import View, Select, Button
+from discord.ui import View, Select
 from utils.config import ConfigManager
-from utils.ui import create_embed
+from utils.ui import ContainerV2, send_container_response, build_fallback_embed
 
 class HelpSelect(Select):
     def __init__(self, config: ConfigManager, prefix: str):
@@ -13,8 +13,8 @@ class HelpSelect(Select):
             discord.SelectOption(label="Overview", description="General system summary", value="overview", default=True),
             discord.SelectOption(label="AI", description="Text generation and analysis", value="ai"),
             discord.SelectOption(label="Voice", description="Voice channel and audio playback", value="voice"),
-            discord.SelectOption(label="Settings", description="Administrative and system configuration", value="settings"),
-            discord.SelectOption(label="System", description="Metrics and status", value="system")
+            discord.SelectOption(label="Settings", description="Administrative configuration", value="settings"),
+            discord.SelectOption(label="System", description="Diagnostics and metrics", value="system")
         ]
         super().__init__(placeholder="Select a category", min_values=1, max_values=1, options=options)
 
@@ -24,80 +24,109 @@ class HelpSelect(Select):
 
         category = self.values[0]
         color = self.config.get_embed_color()
-        embed = self._build_category_embed(category, color)
+        container = self._build_category_container(category, color)
+        embed = build_fallback_embed(container)
         await interaction.response.edit_message(embed=embed, view=self.view)
 
-    def _build_category_embed(self, category: str, color: int) -> discord.Embed:
+    def _build_category_container(self, category: str, color: int) -> ContainerV2:
+        container = ContainerV2(accent_color=color)
+
         if category == "ai":
-            desc = (
-                "### AI Generation & Analysis\n"
-                f"> `{self.cmd_prefix}ai [prompt] [attachments]`\n"
-                "> Query active model with optional file or OCR image attachments.\n\n"
-                f"> `{self.cmd_prefix}ask [prompt] [attachments]`\n"
-                "> Alias for AI text and multimodal queries.\n\n"
-                "> `/ai model [provider] [model]`\n"
-                "> Inspect active provider/model or switch model.\n\n"
-                "> `/ai history <view|clear|export>`\n"
-                "> Manage conversational memory context.\n\n"
-                "> `/ai summarize [target] [lines]`\n"
-                "> Generate executive summary of recent messages.\n"
-                "-# Attachments supported: images (OCR/vision), code, logs, and text documents."
+            container.add_text("## AI Generation & Analysis")
+            container.add_separator(divider=True)
+            container.add_text(
+                f"**Command:** `{self.cmd_prefix}ai` / `{self.cmd_prefix}ask`\n"
+                f"**Syntax:** `{self.cmd_prefix}ai [prompt] [attachments]`\n"
+                "**Description:** Query active provider with optional OCR images, code, or logs."
             )
-            return create_embed(description=desc, color=color)
+            container.add_separator(divider=True)
+            container.add_text(
+                "**Command:** `/ai model`\n"
+                "**Syntax:** `/ai model [provider] [model_name]`\n"
+                "**Description:** Inspect or switch active LLM model."
+            )
+            container.add_separator(divider=True)
+            container.add_text(
+                "**Command:** `/ai history`\n"
+                "**Syntax:** `/ai history <view|clear|export>`\n"
+                "**Description:** Manage active conversation context."
+            )
+            container.add_separator(divider=True)
+            container.add_text("-# Multimodal OCR & Vision supported across providers.")
+            return container
 
         if category == "voice":
-            desc = (
-                "### Voice Channel Interface\n"
-                "> `/join`\n"
-                "> Connect bot to your active voice channel.\n\n"
-                "> `/leave`\n"
-                "> Disconnect bot from the voice channel.\n\n"
-                "> `❌ Stop Audio`\n"
-                "> Interactive button attached to AI responses to terminate speech live.\n"
-                "-# Supports Deepgram, OpenAI TTS, and ElevenLabs speech engines."
+            container.add_text("## Voice Channel Controls")
+            container.add_separator(divider=True)
+            container.add_text(
+                "**Command:** `/join`\n"
+                "**Syntax:** `/join`\n"
+                "**Description:** Connect bot to active voice channel."
             )
-            return create_embed(description=desc, color=color)
+            container.add_separator(divider=True)
+            container.add_text(
+                "**Command:** `/leave`\n"
+                "**Syntax:** `/leave`\n"
+                "**Description:** Disconnect bot from voice channel."
+            )
+            container.add_separator(divider=True)
+            container.add_text(
+                "**Control:** `❌ Stop Audio`\n"
+                "**Description:** Interactive button attached to responses for instant speech cutoff."
+            )
+            container.add_separator(divider=True)
+            container.add_text("-# Synthesizers: Deepgram, OpenAI TTS, ElevenLabs.")
+            return container
 
         if category == "settings":
-            desc = (
-                "### Settings & Administration\n"
-                "> `/set prefix <prefix>` — Set custom command prefix.\n"
-                "> `/set provider <provider>` — Change default LLM provider.\n"
-                "> `/set memory <count>` — Set conversation message retention limit.\n"
-                "> `/set owner <add|remove> <user>` — Manage bot administrators.\n"
-                "> `/set api_key <provider> <key>` — Save API credentials.\n"
-                "> `/set channel <channel> <allow|remove>` — Whitelist channels.\n"
-                "> `/set cooldown <action> [seconds] [user] [role]` — Manage rate limits.\n"
-                "> `/set tts [provider] [voice] [filter] [enabled]` — Configure voice.\n"
-                "> `/set embed [color] [mode]` — Configure theme and appearance.\n"
-                "> `/set usage_limit <type> <id> <limit>` — Daily request quota.\n"
-                "> `/set prompt <view|set|clear> [text] [scope]` — System instructions.\n"
-                "-# Restricted to configured owner user IDs."
+            container.add_text("## Settings & Configuration")
+            container.add_separator(divider=True)
+            container.add_text(
+                "**Syntax:** `/set prefix <prefix>` — Set command prefix\n"
+                "**Syntax:** `/set provider <provider>` — Change default provider\n"
+                "**Syntax:** `/set memory <count>` — Set context retention\n"
+                "**Syntax:** `/set owner <add|remove> <user>` — Manage owners\n"
+                "**Syntax:** `/set api_key <provider> <key>` — Save credentials\n"
+                "**Syntax:** `/set channel <channel> <allow|remove>` — Whitelist channels\n"
+                "**Syntax:** `/set cooldown <action> [seconds] [user] [role]` — Rate limits\n"
+                "**Syntax:** `/set tts [provider] [voice] [filter] [enabled]` — Voice & filters\n"
+                "**Syntax:** `/set embed [color] [mode]` — Appearance\n"
+                "**Syntax:** `/set prompt <view|set|clear> [text] [scope]` — System prompts"
             )
-            return create_embed(description=desc, color=color)
+            container.add_separator(divider=True)
+            container.add_text("-# Restricted to configured owner user IDs.")
+            return container
 
         if category == "system":
-            desc = (
-                "### Diagnostics & Telemetry\n"
-                "> `/stats`\n"
-                "> View gateway latency, memory usage, voice status, and query count.\n\n"
-                f"> `/help` or `{self.cmd_prefix}help`\n"
-                "> Display interactive command guide.\n"
-                "-# Built with discord.py v2.7 & Containers V2."
+            container.add_text("## Diagnostics & Metrics")
+            container.add_separator(divider=True)
+            container.add_text(
+                "**Command:** `/stats`\n"
+                "**Syntax:** `/stats`\n"
+                "**Description:** Display latency, memory, voice state, and query count."
             )
-            return create_embed(description=desc, color=color)
+            container.add_separator(divider=True)
+            container.add_text(
+                f"**Command:** `/help` / `{self.cmd_prefix}help`\n"
+                "**Description:** Interactive category help menu."
+            )
+            container.add_separator(divider=True)
+            container.add_text("-# Built with discord.py v2.7 & Containers V2.")
+            return container
 
         active_p = self.config.get("active_provider", "gemini")
         active_m = self.config.get("active_model", "gemini-3.5-flash")
-        desc = (
-            "### Command Guide & Navigation\n"
-            f"> **Prefix**: `{self.cmd_prefix}`\n"
-            f"> **Provider**: `{active_p}`\n"
-            f"> **Model**: `{active_m}`\n\n"
-            "Select a category from the dropdown menu below to view detailed command references.\n"
-            "-# Containers V2 Interface"
+        container.add_text("## Command Guide & Overview")
+        container.add_separator(divider=True)
+        container.add_text(
+            f"**Prefix:** `{self.cmd_prefix}`\n"
+            f"**Provider:** `{active_p}`\n"
+            f"**Model:** `{active_m}`\n\n"
+            "Select a category from the dropdown menu below to view specific commands."
         )
-        return create_embed(description=desc, color=color)
+        container.add_separator(divider=True)
+        container.add_text("-# Containers V2 Architecture")
+        return container
 
 class HelpView(View):
     def __init__(self, config: ConfigManager, prefix: str, timeout: float = 180.0):
@@ -114,41 +143,19 @@ class HelpCog(commands.Cog):
     async def help_prefix(self, ctx: commands.Context):
         prefix = self.config.get_prefix()
         color = self.config.get_embed_color()
-        active_p = self.config.get("active_provider", "gemini")
-        active_m = self.config.get("active_model", "gemini-3.5-flash")
-
-        desc = (
-            "### Command Guide & Navigation\n"
-            f"> **Prefix**: `{prefix}`\n"
-            f"> **Provider**: `{active_p}`\n"
-            f"> **Model**: `{active_m}`\n\n"
-            "Select a category from the dropdown menu below to view detailed command references.\n"
-            "-# Containers V2 Interface"
-        )
-
-        embed = create_embed(description=desc, color=color)
+        selector = HelpSelect(self.config, prefix)
+        container = selector._build_category_container("overview", color)
         view = HelpView(self.config, prefix)
-        await ctx.reply(embed=embed, view=view, mention_author=False)
+        await send_container_response(ctx, container, view=view, bot=self.bot)
 
     @app_commands.command(name="help", description="Guide")
     async def help_slash(self, interaction: discord.Interaction):
         prefix = self.config.get_prefix()
         color = self.config.get_embed_color()
-        active_p = self.config.get("active_provider", "gemini")
-        active_m = self.config.get("active_model", "gemini-3.5-flash")
-
-        desc = (
-            "### Command Guide & Navigation\n"
-            f"> **Prefix**: `{prefix}`\n"
-            f"> **Provider**: `{active_p}`\n"
-            f"> **Model**: `{active_m}`\n\n"
-            "Select a category from the dropdown menu below to view detailed command references.\n"
-            "-# Containers V2 Interface"
-        )
-
-        embed = create_embed(description=desc, color=color)
+        selector = HelpSelect(self.config, prefix)
+        container = selector._build_category_container("overview", color)
         view = HelpView(self.config, prefix)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await send_container_response(interaction, container, view=view, ephemeral=True, bot=self.bot)
 
 async def setup(bot: commands.Bot):
     config: ConfigManager = bot.config

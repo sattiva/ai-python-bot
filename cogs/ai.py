@@ -7,7 +7,7 @@ import base64
 from utils.config import ConfigManager
 from utils.providers import generate_response
 from utils.tts import synthesize_speech, create_audio_source
-from utils.ui import create_embed, create_error_embed, create_success_embed, VoiceControlView
+from utils.ui import create_embed, create_error_embed, create_success_embed, VoiceControlView, ContainerV2, send_container_response
 
 import logging
 logger = logging.getLogger("AI")
@@ -113,28 +113,15 @@ class AICog(commands.Cog):
         self.config.append_history(ctx.author.id, "assistant", response_text)
 
         color = self.config.get_embed_color()
-        embed_mode = self.config.get("embed_settings", {}).get("mode", "standard")
-
         voice_client = ctx.guild.voice_client if ctx.guild else None
         voice_view = VoiceControlView(voice_client) if (voice_client and voice_client.is_connected()) else None
 
-        if len(response_text) <= 4000 and embed_mode != "plain":
-            embed = create_embed(
-                description=response_text,
-                color=color,
-                footer=f"{provider} / {model}"
-            )
-            if voice_view:
-                await ctx.reply(embed=embed, view=voice_view, mention_author=False)
-            else:
-                await ctx.reply(embed=embed, mention_author=False)
-        else:
-            chunks = [response_text[i:i + 1900] for i in range(0, len(response_text), 1900)]
-            for i, chunk in enumerate(chunks):
-                if i == len(chunks) - 1 and voice_view:
-                    await ctx.reply(chunk, view=voice_view, mention_author=False)
-                else:
-                    await ctx.reply(chunk, mention_author=False)
+        container = ContainerV2(accent_color=color)
+        container.add_text(response_text)
+        container.add_separator(divider=True)
+        container.add_text(f"-# {provider} / {model}")
+
+        await send_container_response(ctx, container, view=voice_view, bot=self.bot)
 
         if voice_client and voice_client.is_connected():
             tts_settings = self.config.get("tts_settings", {})

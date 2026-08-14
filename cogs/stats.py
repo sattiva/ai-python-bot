@@ -4,7 +4,7 @@ from discord import app_commands
 import os
 import psutil
 from utils.config import ConfigManager
-from utils.ui import create_embed, create_error_embed
+from utils.ui import ContainerV2, send_container_response, create_error_embed
 
 class StatsCog(commands.Cog):
     def __init__(self, bot: commands.Bot, config: ConfigManager):
@@ -34,23 +34,21 @@ class StatsCog(commands.Cog):
 
         rate_limit_seconds = self.config.get("rate_limits", {}).get("seconds", 5)
 
-        description = (
-            f"### Telemetry & Diagnostics\n"
-            f"> **Gateway Latency**: `{latency_ms} ms`\n"
-            f"> **Memory Usage**: `{memory_usage_mb:.2f} MB`\n"
-            f"> **Voice State**: `{voice_status}`\n"
-            f"> **Total Queries**: `{total_prompts}`\n"
-            f"> **Cooldown**: `{rate_limit_seconds}s`\n"
-            f"> **Active Guilds**: `{len(self.bot.guilds)}`\n"
-            f"-# Architecture: discord.py v2.7 / Containers V2"
+        container = ContainerV2(accent_color=self.config.get_embed_color())
+        container.add_text("## Telemetry & Diagnostics")
+        container.add_separator(divider=True)
+        container.add_text(
+            f"**Gateway Latency:** `{latency_ms} ms`\n"
+            f"**Memory Allocation:** `{memory_usage_mb:.2f} MB`\n"
+            f"**Voice Client:** `{voice_status}`\n"
+            f"**Total Queries:** `{total_prompts}`\n"
+            f"**Active Cooldown:** `{rate_limit_seconds}s`\n"
+            f"**Active Guilds:** `{len(self.bot.guilds)}`"
         )
+        container.add_separator(divider=True)
+        container.add_text("-# Architecture: discord.py v2.7 & Containers V2")
 
-        embed = create_embed(
-            description=description,
-            color=self.config.get_embed_color()
-        )
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await send_container_response(interaction, container, ephemeral=True, bot=self.bot)
 
 async def setup(bot: commands.Bot):
     config: ConfigManager = bot.config
